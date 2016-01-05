@@ -42,13 +42,28 @@ named!(whose_turn <&[u8], Color>,
 );
 
 
-/*
-named!(castling <&[u8], i8>,
+named!(castling <&[u8], [[bool;2];2]>,
   alt!(
     tag!("-") => {|_| [[false, false], [false, false]]} |
+    map_res!(
+      is_a!("kqKQ"),
+      |str: &[u8]| -> Result<[[bool;2];2], ()> {
+        let mut ret = [[false, false], [false, false]];
+        for c in str {
+          match *c as char {
+            'K' => ret[Color::White as usize][Flank::Kingside as usize] = true,
+            'Q' => ret[Color::White as usize][Flank::Queenside as usize] = true,
+            'k' => ret[Color::Black as usize][Flank::Kingside as usize] = true,
+            'q' => ret[Color::Black as usize][Flank::Queenside as usize] = true,
+            _ => return Err(()),
+          }
+        }
+        Ok(ret)
+      }
+    )
   )
 );
-*/
+
 
 named!(file <&[u8], i8>,
   map_res!(
@@ -121,8 +136,8 @@ named!(fen<&[u8], &Board>,
 
 #[cfg(test)]
 mod test {
-  use board::{Pos,Color};
-  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn};
+  use board::{Pos,Color,Flank};
+  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling};
   use nom::ErrorKind;
   use nom::Err::Position;
   use nom::Needed::Size;
@@ -185,5 +200,15 @@ mod test {
     assert_eq!(whose_turn(&b"c"[..]), Error(Position(ErrorKind::MapRes, &b"c"[..])));
   }
 
+  #[test]
+  fn castling_test() {
+    assert_eq!(castling(&b"-"[..]), Done(&b""[..], [[false, false], [false, false]]));
+    assert_eq!(castling(&b"kqKQ"[..]), Done(&b""[..], [[true, true], [true, true]]));
+    assert_eq!(castling(&b"KQkq"[..]), Done(&b""[..], [[true, true], [true, true]]));
+    assert_eq!(castling(&b"k"[..]), Done(&b""[..], [[false, false], [true, false]]));
+    assert_eq!(castling(&b"kQ"[..]), Done(&b""[..], [[false, true], [true, false]]));
+    assert_eq!(castling(&b""[..]), Incomplete(Size(1)));
+    assert_eq!(castling(&b"F"[..]), Error(Position(ErrorKind::Alt, &b"F"[..])));
+  }
 
 }

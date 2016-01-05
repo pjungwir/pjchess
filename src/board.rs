@@ -5,7 +5,7 @@ pub struct Pos {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-enum Flank {
+pub enum Flank {
   Kingside,
   Queenside,
 }
