@@ -28,6 +28,19 @@ named!(fullmove_number <&[u8], u16>,
   )
 );
 
+named!(whose_turn <&[u8], Color>,
+  map_res!(
+    take!(1),
+    |ch: &[u8]| -> Result<Color, ()> {
+       match ch[0] as char {
+        'w' => Ok(Color::White),
+        'b' => Ok(Color::Black),
+        _ => Err(()),
+      }
+    }
+  )
+);
+
 
 /*
 named!(castling <&[u8], i8>,
@@ -108,8 +121,8 @@ named!(fen<&[u8], &Board>,
 
 #[cfg(test)]
 mod test {
-  use board::Pos;
-  use super::{file,rank,pos,halfmove_clock,fullmove_number};
+  use board::{Pos,Color};
+  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn};
   use nom::ErrorKind;
   use nom::Err::Position;
   use nom::Needed::Size;
@@ -162,6 +175,14 @@ mod test {
     assert_eq!(fullmove_number(&b""[..]), Error(Position(ErrorKind::MapRes, &b""[..])));
     assert_eq!(fullmove_number(&b"a"[..]), Error(Position(ErrorKind::Digit, &b"a"[..])));
     assert_eq!(fullmove_number(&b"-1"[..]), Error(Position(ErrorKind::Digit, &b"-1"[..])));
+  }
+
+  #[test]
+  fn whose_turn_test() {
+    assert_eq!(whose_turn(&b"w"[..]), Done(&b""[..], Color::White));
+    assert_eq!(whose_turn(&b"b"[..]), Done(&b""[..], Color::Black));
+    assert_eq!(whose_turn(&b""[..]), Incomplete(Size(1)));
+    assert_eq!(whose_turn(&b"c"[..]), Error(Position(ErrorKind::MapRes, &b"c"[..])));
   }
 
 

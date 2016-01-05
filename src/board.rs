@@ -20,7 +20,7 @@ impl Flank {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-enum Color {
+pub enum Color {
   White,
   Black,
 }
