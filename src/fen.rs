@@ -1,16 +1,33 @@
 #[macro_use]
 
 use board::*;
-use nom::{IResult,digit,multispace};
+use nom::{IResult,digit,is_digit};
 use nom::Err;
 use nom::IResult::*;
 
 use std::str;
 use std::str::FromStr;
 
-// named!(halfmove_clock <&[u8], i32>, );
-// 
-// named!(fullmove_number, ..);
+named!(halfmove_clock <&[u8], u16>,
+  map_res!(
+    map_res!(
+      digit,
+      str::from_utf8
+    ),
+    FromStr::from_str
+  )
+);
+ 
+named!(fullmove_number <&[u8], u16>,
+  map_res!(
+    map_res!(
+      digit,
+      str::from_utf8
+    ),
+    FromStr::from_str
+  )
+);
+
 
 /*
 named!(castling <&[u8], i8>,
@@ -92,7 +109,7 @@ named!(fen<&[u8], &Board>,
 #[cfg(test)]
 mod test {
   use board::Pos;
-  use super::{file,rank,pos};
+  use super::{file,rank,pos,halfmove_clock,fullmove_number};
   use nom::ErrorKind;
   use nom::Err::Position;
   use nom::Needed::Size;
@@ -126,5 +143,26 @@ mod test {
     assert_eq!(pos(&b"a9"[..]), Error(Position(ErrorKind::Alt, &b"a9"[..])));
     assert_eq!(pos(&b"-"[..]), Done(&b""[..], None));
   }
+
+  #[test]
+  fn halfmove_clock_test() {
+    assert_eq!(halfmove_clock(&b"0"[..]), Done(&b""[..], 0));
+    assert_eq!(halfmove_clock(&b"1"[..]), Done(&b""[..], 1));
+    assert_eq!(halfmove_clock(&b"33"[..]), Done(&b""[..], 33));
+    assert_eq!(halfmove_clock(&b""[..]), Error(Position(ErrorKind::MapRes, &b""[..])));
+    assert_eq!(halfmove_clock(&b"a"[..]), Error(Position(ErrorKind::Digit, &b"a"[..])));
+    assert_eq!(halfmove_clock(&b"-1"[..]), Error(Position(ErrorKind::Digit, &b"-1"[..])));
+  }
+
+  #[test]
+  fn fullmove_number_test() {
+    assert_eq!(fullmove_number(&b"0"[..]), Done(&b""[..], 0));
+    assert_eq!(fullmove_number(&b"1"[..]), Done(&b""[..], 1));
+    assert_eq!(fullmove_number(&b"33"[..]), Done(&b""[..], 33));
+    assert_eq!(fullmove_number(&b""[..]), Error(Position(ErrorKind::MapRes, &b""[..])));
+    assert_eq!(fullmove_number(&b"a"[..]), Error(Position(ErrorKind::Digit, &b"a"[..])));
+    assert_eq!(fullmove_number(&b"-1"[..]), Error(Position(ErrorKind::Digit, &b"-1"[..])));
+  }
+
 
 }

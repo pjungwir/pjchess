@@ -113,6 +113,8 @@ pub struct Board {
   en_passant: Option<Pos>,  // set to the destination square of the piece that will capture.
   can_castle: [[bool;2];2],   // [[white kingside, white queenside], [black kingside, black queenside]]
   side_to_move: Color,
+  halfmove_clock: u16,
+  fullmove_number: u16,
 }
   
 impl Board {
@@ -145,6 +147,8 @@ impl Board {
       en_passant: None,
       can_castle: [[true, true], [true, true]],
       side_to_move: Color::White,
+      halfmove_clock: 0,
+      fullmove_number: 1,
     };
 
     b
