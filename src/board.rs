@@ -1,7 +1,7 @@
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-struct Pos {
-  rank: i8,
-  file: i8,
+pub struct Pos {
+  pub rank: i8,
+  pub file: i8,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -170,7 +170,7 @@ impl Board {
       if b.is_in_check(self.side_to_move) {
         legal[i] = None;
       } else {
-        if (i != j) {
+        if i != j {
           legal[j] = legal[i];
           legal[i] = None;
         }
@@ -185,9 +185,9 @@ impl Board {
       reachable[i] = None;
     }
     if let Some(p) = self.piece_at(from) {
-      if (p.color != self.side_to_move) { return };
+      if p.color != self.side_to_move { return };
 
-      match (p.figure) {
+      match p.figure {
         Figure::Pawn   => self.reachable_squares_pawn(from, reachable),
         Figure::Rook   => self.reachable_squares_rook(from, reachable),
         Figure::Knight => self.reachable_squares_knight(from, reachable),
@@ -322,7 +322,7 @@ impl Board {
     reached += self.reachable_squares_direction(from,  1, -1, 1, reachable, reached);
     reached += self.reachable_squares_direction(from, -1,  1, 1, reachable, reached);
     reached += self.reachable_squares_direction(from,  1,  1, 1, reachable, reached);
-    if (!self.is_in_check(self.side_to_move)) {
+    if !self.is_in_check(self.side_to_move) {
       if self.can_castle(self.side_to_move, Flank::Kingside)
           && self.piece_at(Pos{rank: from.rank, file: 5}) == None
           && self.piece_at(Pos{rank: from.rank, file: 6}) == None {
@@ -419,8 +419,8 @@ impl Board {
       b.can_castle[self.side_to_move as usize][Flank::Kingside as usize] = false;
       b.can_castle[self.side_to_move as usize][Flank::Queenside as usize] = false;
     } else if p.figure == Figure::Rook {
-      if (mv.from.file == 0) { b.can_castle[self.side_to_move as usize][Flank::Queenside as usize] = false; }
-      else if (mv.from.file == 7) { b.can_castle[self.side_to_move as usize][Flank::Kingside as usize] = false; }
+      if mv.from.file == 0 { b.can_castle[self.side_to_move as usize][Flank::Queenside as usize] = false; }
+      else if mv.from.file == 7 { b.can_castle[self.side_to_move as usize][Flank::Kingside as usize] = false; }
     } else if p.figure == Figure::Pawn {
       if (mv.from.rank - mv.to.rank).abs() == 2 {
         b.en_passant = Some(Pos{rank: mv.from.rank + b.side_to_move.forward(), file: mv.from.file});
