@@ -8,6 +8,41 @@ use nom::IResult::*;
 use std::str;
 use std::str::FromStr;
 
+named!(grid_row <&[u8], [Option<Piece>;8]>,
+  map_res!(
+    is_a!("12345678kqrbnpKQRBNP"),
+    |str: &[u8]| -> Result<[Option<Piece>;8], ()> {
+      let mut ret = [None;8];
+      let mut i: usize = 0;
+      for c in str {
+        if is_digit(*c) {
+          i += FromStr::from_str(str::from_utf8(&[*c]).unwrap()).unwrap();
+        } else {
+          match *c as char {
+            'K' => ret[i] = Some(Piece{color: Color::White, figure: Figure::King}),
+            'Q' => ret[i] = Some(Piece{color: Color::White, figure: Figure::Queen}),
+            'R' => ret[i] = Some(Piece{color: Color::White, figure: Figure::Rook}),
+            'B' => ret[i] = Some(Piece{color: Color::White, figure: Figure::Bishop}),
+            'N' => ret[i] = Some(Piece{color: Color::White, figure: Figure::Knight}),
+            'P' => ret[i] = Some(Piece{color: Color::White, figure: Figure::Pawn}),
+            'k' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::King}),
+            'q' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::Queen}),
+            'r' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::Rook}),
+            'b' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::Bishop}),
+            'n' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::Knight}),
+            'p' => ret[i] = Some(Piece{color: Color::Black, figure: Figure::Pawn}),
+            _ => return Err(()),
+          }
+          i += 1
+        }
+      }
+      if i != 8 { return Err(()); }
+      Ok(ret)
+    }
+  )
+);
+
+
 named!(halfmove_clock <&[u8], u16>,
   map_res!(
     map_res!(
@@ -136,8 +171,8 @@ named!(fen<&[u8], &Board>,
 
 #[cfg(test)]
 mod test {
-  use board::{Pos,Color,Flank};
-  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling};
+  use board::{Pos,Color,Flank,Figure,Piece};
+  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling,grid_row};
   use nom::ErrorKind;
   use nom::Err::Position;
   use nom::Needed::Size;
@@ -209,6 +244,25 @@ mod test {
     assert_eq!(castling(&b"kQ"[..]), Done(&b""[..], [[false, true], [true, false]]));
     assert_eq!(castling(&b""[..]), Incomplete(Size(1)));
     assert_eq!(castling(&b"F"[..]), Error(Position(ErrorKind::Alt, &b"F"[..])));
+  }
+
+  #[test]
+  fn grid_row_test() {
+    // too short:
+    assert_eq!(grid_row(&b"p"[..]), Error(Position(ErrorKind::MapRes, &b"p"[..])));
+    assert_eq!(grid_row(&b"ppppppp"[..]), Error(Position(ErrorKind::MapRes, &b"ppppppp"[..])));
+
+    // too long:
+    assert_eq!(grid_row(&b"88"[..]), Error(Position(ErrorKind::MapRes, &b"88"[..])));
+    assert_eq!(grid_row(&b"81"[..]), Error(Position(ErrorKind::MapRes, &b"81"[..])));
+    assert_eq!(grid_row(&b"7p1"[..]), Error(Position(ErrorKind::MapRes, &b"7p1"[..])));
+
+    // just right:
+    assert_eq!(grid_row(&b"pppppppp"[..]), Done(&b""[..], [Some(Piece{color: Color::Black, figure: Figure::Pawn});8]));
+    assert_eq!(grid_row(&b"8"[..]), Done(&b""[..], [None;8]));
+    assert_eq!(grid_row(&b"1R5k"[..]), Done(&b""[..], [None, Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King})]));
+    assert_eq!(grid_row(&b"R6k"[..]), Done(&b""[..], [Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King})]));
+    assert_eq!(grid_row(&b"R5k1"[..]), Done(&b""[..], [Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King}), None]));
   }
 
 }

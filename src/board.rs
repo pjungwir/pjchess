@@ -56,7 +56,7 @@ impl Color {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-enum Figure {
+pub enum Figure {
   Pawn,
   Knight,
   Bishop,
@@ -66,9 +66,9 @@ enum Figure {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-struct Piece {
-  color: Color,
-  figure: Figure,
+pub struct Piece {
+  pub color: Color,
+  pub figure: Figure,
 }
 
 impl Piece {
