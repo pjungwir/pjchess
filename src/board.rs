@@ -260,7 +260,7 @@ impl Board {
           mv = Ply { from: from, to: to, capture: true, en_passant: false, castle: false, promote: None };
           if mv.to.rank == self.side_to_move.last_rank() { mv.promote = Some(Figure::Queen); }
           reachable[reached] = Some(mv);
-          reached += 1;
+          // reached += 1;
         }
       } else {
         if let Some(pos) = self.en_passant {
@@ -268,7 +268,7 @@ impl Board {
             mv = Ply { from: from, to: to, capture: true, en_passant: true, castle: false, promote: None };
             if mv.to.rank == self.side_to_move.last_rank() { mv.promote = Some(Figure::Queen); }
             reachable[reached] = Some(mv);
-            reached += 1;
+            // reached += 1;
           }
         }
       }
@@ -281,7 +281,7 @@ impl Board {
     reached += self.reachable_squares_direction(from, -1,  0, 8, reachable, reached);
     reached += self.reachable_squares_direction(from,  1,  0, 8, reachable, reached);
     reached += self.reachable_squares_direction(from,  0, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0,  1, 8, reachable, reached);
+    self.reachable_squares_direction(from,  0,  1, 8, reachable, reached);
   }
 
   fn reachable_squares_knight(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
@@ -293,7 +293,7 @@ impl Board {
     reached += self.reachable_squares_direction(from, -2, -1, 1, reachable, reached);
     reached += self.reachable_squares_direction(from, -1, -2, 1, reachable, reached);
     reached += self.reachable_squares_direction(from,  1, -2, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  2, -1, 1, reachable, reached);
+    self.reachable_squares_direction(from,  2, -1, 1, reachable, reached);
   }
 
   fn reachable_squares_bishop(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
@@ -301,7 +301,7 @@ impl Board {
     reached += self.reachable_squares_direction(from, -1, -1, 8, reachable, reached);
     reached += self.reachable_squares_direction(from,  1, -1, 8, reachable, reached);
     reached += self.reachable_squares_direction(from, -1,  1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
+    self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
   }
 
   fn reachable_squares_queen(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
@@ -313,7 +313,7 @@ impl Board {
     reached += self.reachable_squares_direction(from, -1, -1, 8, reachable, reached);
     reached += self.reachable_squares_direction(from,  1, -1, 8, reachable, reached);
     reached += self.reachable_squares_direction(from, -1,  1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
+    self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
   }
 
   fn reachable_squares_king(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
@@ -333,7 +333,7 @@ impl Board {
         let mv = Ply{from: from, to: Pos{rank: from.rank, file: 6}, capture: false, en_passant: false, castle: true, promote: None};
         if !self.castling_through_check(mv) {
           reachable[reached] = Some(mv);
-          reached += 1;
+          // reached += 1;
         }
       }
       if self.can_castle(self.side_to_move, Flank::Queenside)
@@ -343,7 +343,7 @@ impl Board {
         let mv = Ply{from: from, to: Pos{rank: from.rank, file: 2}, capture: false, en_passant: false, castle: true, promote: None};
         if !self.castling_through_check(mv) {
           reachable[reached] = Some(mv);
-          reached += 1;
+          // reached += 1;
         }
       }
     }

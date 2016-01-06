@@ -1,9 +1,6 @@
-#[macro_use]
-
 use board::*;
-use nom::{IResult,digit,is_digit,eof};
+use nom::{digit,is_digit,eof};
 use nom::Err;
-use nom::IResult::*;
 
 use std::str;
 use std::str::FromStr;
@@ -205,7 +202,7 @@ named!(pos <&[u8], Option<Pos> >,
 
 #[cfg(test)]
 mod test {
-  use board::{Pos,Color,Flank,Figure,Piece,Board};
+  use board::{Pos,Color,Figure,Piece,Board};
   use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling,grid_row,grid,fen};
   use nom::ErrorKind;
   use nom::Err::Position;
