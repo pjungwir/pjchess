@@ -1,12 +1,63 @@
 #[macro_use]
 
 use board::*;
-use nom::{IResult,digit,is_digit};
+use nom::{IResult,digit,is_digit,eof};
 use nom::Err;
 use nom::IResult::*;
 
 use std::str;
 use std::str::FromStr;
+
+named!(fen <&[u8], Board>,
+  chain!(
+    grid:            grid            ~
+                     tag!(" ")       ~
+    whose_turn:      whose_turn      ~
+                     tag!(" ")       ~
+    castling:        castling        ~
+                     tag!(" ")       ~
+    en_passant:      pos             ~
+                     tag!(" ")       ~
+    halfmove_clock:  halfmove_clock  ~
+                     tag!(" ")       ~
+    fullmove_number: fullmove_number ~
+                     eof,
+    || {
+      Board {
+        grid: grid,
+        en_passant: en_passant,
+        can_castle: castling,
+        side_to_move: whose_turn,
+        halfmove_clock: halfmove_clock,
+        fullmove_number: fullmove_number,
+      }
+    }
+  )
+);
+
+named!(grid <&[u8], [[Option<Piece>;8];8]>,
+  chain!(
+    row0: grid_row  ~
+          tag!("/") ~
+    row1: grid_row  ~
+          tag!("/") ~
+    row2: grid_row  ~
+          tag!("/") ~
+    row3: grid_row  ~
+          tag!("/") ~
+    row4: grid_row  ~
+          tag!("/") ~
+    row5: grid_row  ~
+          tag!("/") ~
+    row6: grid_row  ~
+          tag!("/") ~
+    row7: grid_row,
+    || {
+      [row7, row6, row5, row4, row3, row2, row1, row0]
+    }
+  )
+);
+
 
 named!(grid_row <&[u8], [Option<Piece>;8]>,
   map_res!(
@@ -152,27 +203,10 @@ named!(pos <&[u8], Option<Pos> >,
   )
 );
 
-/*
-named!(fen<&[u8], &Board>,
-  chain!(
-                     tag!(" ") ~
-    en_passant:      pos ~
-                     tag!(" ") ~
-    halfmove_clock:  digit ~
-                     tag!(" ") ~
-    fullmove_number: digit ~ 
-                     eof ~
-    ,
-    || {
-    }
-  )
-);
-*/
-
 #[cfg(test)]
 mod test {
-  use board::{Pos,Color,Flank,Figure,Piece};
-  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling,grid_row};
+  use board::{Pos,Color,Flank,Figure,Piece,Board};
+  use super::{file,rank,pos,halfmove_clock,fullmove_number,whose_turn,castling,grid_row,grid,fen};
   use nom::ErrorKind;
   use nom::Err::Position;
   use nom::Needed::Size;
@@ -263,6 +297,72 @@ mod test {
     assert_eq!(grid_row(&b"1R5k"[..]), Done(&b""[..], [None, Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King})]));
     assert_eq!(grid_row(&b"R6k"[..]), Done(&b""[..], [Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King})]));
     assert_eq!(grid_row(&b"R5k1"[..]), Done(&b""[..], [Some(Piece{color: Color::White, figure: Figure::Rook}), None, None, None, None, None, Some(Piece{color: Color::Black, figure: Figure::King}), None]));
+  }
+
+  #[test]
+  fn grid_test() {
+    assert_eq!(grid(&b"8/8/8/8/8/8/8/8"[..]), Done(&b""[..], [[None;8];8]));
+    assert_eq!(grid(&b"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"[..]), Done(&b""[..], [
+        [Some(Piece{color: Color::White, figure: Figure::Rook}),
+         Some(Piece{color: Color::White, figure: Figure::Knight}),
+         Some(Piece{color: Color::White, figure: Figure::Bishop}),
+         Some(Piece{color: Color::White, figure: Figure::Queen}),
+         Some(Piece{color: Color::White, figure: Figure::King}),
+         Some(Piece{color: Color::White, figure: Figure::Bishop}),
+         Some(Piece{color: Color::White, figure: Figure::Knight}),
+         Some(Piece{color: Color::White, figure: Figure::Rook})],
+        [Some(Piece{color: Color::White, figure: Figure::Pawn});8],
+        [None;8],
+        [None;8],
+        [None;8],
+        [None;8],
+        [Some(Piece{color: Color::Black, figure: Figure::Pawn});8],
+        [Some(Piece{color: Color::Black, figure: Figure::Rook}),
+         Some(Piece{color: Color::Black, figure: Figure::Knight}),
+         Some(Piece{color: Color::Black, figure: Figure::Bishop}),
+         Some(Piece{color: Color::Black, figure: Figure::Queen}),
+         Some(Piece{color: Color::Black, figure: Figure::King}),
+         Some(Piece{color: Color::Black, figure: Figure::Bishop}),
+         Some(Piece{color: Color::Black, figure: Figure::Knight}),
+         Some(Piece{color: Color::Black, figure: Figure::Rook})],
+      ]));
+
+    assert_eq!(grid(&b"rnbqkbnr/pppppppp"[..]), Incomplete(Size(18)));
+  }
+
+  #[test]
+  fn fen_test() {
+    assert_eq!(fen(&b"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"[..]), Done(&b""[..], Board {
+      grid: [
+        [Some(Piece{color: Color::White, figure: Figure::Rook}),
+         Some(Piece{color: Color::White, figure: Figure::Knight}),
+         Some(Piece{color: Color::White, figure: Figure::Bishop}),
+         Some(Piece{color: Color::White, figure: Figure::Queen}),
+         Some(Piece{color: Color::White, figure: Figure::King}),
+         Some(Piece{color: Color::White, figure: Figure::Bishop}),
+         Some(Piece{color: Color::White, figure: Figure::Knight}),
+         Some(Piece{color: Color::White, figure: Figure::Rook})],
+        [Some(Piece{color: Color::White, figure: Figure::Pawn});8],
+        [None;8],
+        [None;8],
+        [None;8],
+        [None;8],
+        [Some(Piece{color: Color::Black, figure: Figure::Pawn});8],
+        [Some(Piece{color: Color::Black, figure: Figure::Rook}),
+         Some(Piece{color: Color::Black, figure: Figure::Knight}),
+         Some(Piece{color: Color::Black, figure: Figure::Bishop}),
+         Some(Piece{color: Color::Black, figure: Figure::Queen}),
+         Some(Piece{color: Color::Black, figure: Figure::King}),
+         Some(Piece{color: Color::Black, figure: Figure::Bishop}),
+         Some(Piece{color: Color::Black, figure: Figure::Knight}),
+         Some(Piece{color: Color::Black, figure: Figure::Rook})],
+      ],
+      en_passant: None,
+      can_castle: [[true, true], [true, true]],
+      side_to_move: Color::White,
+      halfmove_clock: 0,
+      fullmove_number: 1,
+    }));
   }
 
 }

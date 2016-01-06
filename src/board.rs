@@ -109,12 +109,12 @@ struct Ply {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Board {
-  grid: [[Option<Piece>;8];8],
-  en_passant: Option<Pos>,  // set to the destination square of the piece that will capture.
-  can_castle: [[bool;2];2],   // [[white kingside, white queenside], [black kingside, black queenside]]
-  side_to_move: Color,
-  halfmove_clock: u16,
-  fullmove_number: u16,
+  pub grid: [[Option<Piece>;8];8],
+  pub en_passant: Option<Pos>,  // set to the destination square of the piece that will capture.
+  pub can_castle: [[bool;2];2],   // [[white kingside, white queenside], [black kingside, black queenside]]
+  pub side_to_move: Color,
+  pub halfmove_clock: u16,
+  pub fullmove_number: u16,
 }
   
 impl Board {
