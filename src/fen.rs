@@ -8,7 +8,7 @@ use nom::IResult::*;
 use std::str;
 use std::str::FromStr;
 
-named!(fen <&[u8], Board>,
+named!(pub fen <&[u8], Board>,
   chain!(
     grid:            grid            ~
                      tag!(" ")       ~

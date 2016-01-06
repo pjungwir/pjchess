@@ -1,3 +1,5 @@
+use nom::IResult;
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Pos {
   pub rank: i8,
@@ -489,6 +491,10 @@ impl Board {
 #[cfg(test)]
 mod tests {
   use super::{Board, Piece, Color, Figure, Pos};
+  use fen::fen;
+  use nom::IResult;
+  use nom::IResult::*;
+  use nom::GetOutput;
 
   #[test]
   fn colors() {
@@ -566,6 +572,15 @@ mod tests {
     assert!(legal[0].map(|mv| mv.to) == Some(Pos{rank: 2, file: 2}));
     assert!(legal[1].map(|mv| mv.to) == Some(Pos{rank: 2, file: 0}));
     assert!(legal[2] == None);
+  }
+
+  #[test]
+  fn legal_queen_e4() {
+    let b = fen(&b"1k6/8/8/8/4Q3/8/8/1K6 w - - 0 1"[..]).output().expect();
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 3, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert!(legal[0].map(|mv| mv.to) == Some(Pos{rank: 2, file: 2}));
   }
 
   // TODO: test for is_in_check
