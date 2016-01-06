@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["Paul A. Jungwirth <pj@illuminatedcomputing.com>"]
 
 [dependencies]
-nom = "~1.0.0"
+nom = "~1.1.0"
 

@@ -246,7 +246,7 @@ mod test {
     assert_eq!(halfmove_clock(&b"0"[..]), Done(&b""[..], 0));
     assert_eq!(halfmove_clock(&b"1"[..]), Done(&b""[..], 1));
     assert_eq!(halfmove_clock(&b"33"[..]), Done(&b""[..], 33));
-    assert_eq!(halfmove_clock(&b""[..]), Error(Position(ErrorKind::MapRes, &b""[..])));
+    assert_eq!(halfmove_clock(&b""[..]), Error(Position(ErrorKind::Digit, &b""[..])));
     assert_eq!(halfmove_clock(&b"a"[..]), Error(Position(ErrorKind::Digit, &b"a"[..])));
     assert_eq!(halfmove_clock(&b"-1"[..]), Error(Position(ErrorKind::Digit, &b"-1"[..])));
   }
@@ -256,7 +256,7 @@ mod test {
     assert_eq!(fullmove_number(&b"0"[..]), Done(&b""[..], 0));
     assert_eq!(fullmove_number(&b"1"[..]), Done(&b""[..], 1));
     assert_eq!(fullmove_number(&b"33"[..]), Done(&b""[..], 33));
-    assert_eq!(fullmove_number(&b""[..]), Error(Position(ErrorKind::MapRes, &b""[..])));
+    assert_eq!(fullmove_number(&b""[..]), Error(Position(ErrorKind::Digit, &b""[..])));
     assert_eq!(fullmove_number(&b"a"[..]), Error(Position(ErrorKind::Digit, &b"a"[..])));
     assert_eq!(fullmove_number(&b"-1"[..]), Error(Position(ErrorKind::Digit, &b"-1"[..])));
   }
