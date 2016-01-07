@@ -158,12 +158,15 @@ impl Board {
     self.grid[pos.rank as usize][pos.file as usize]
   }
 
-  fn can_castle(&self, c: Color, f: Flank) -> bool {
+  fn can_still_castle(&self, c: Color, f: Flank) -> bool {
     self.can_castle[c as usize][f as usize]
   }
 
+  // Finds all possible legal moves for a given piece.
   fn legal_moves(&self, from: Pos, legal: &mut [Option<Ply>;28]) {
-    self.reachable_squares(from, legal);
+
+    // First find the squares this piece can reach regardless of check.
+    self.reachable_squares(from, self.side_to_move, legal);
 
     // Now take out the ones that are in check.
     let mut i = 0;
@@ -184,20 +187,28 @@ impl Board {
     }
   }
 
-  fn reachable_squares(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  // Finds all possible moves for a given piece,
+  // *without* considering whether it would put you in check.
+  // This is so is_in_check can use this same method.
+  fn reachable_squares(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
+    // Look at all the squares on the board based on geometry,
+    // until blocked or off the board.
+    // If blocked: can we capture it?
+
+    // TODO: Is this initialization necessary?:
     for i in 0..(reachable.len()) {
       reachable[i] = None;
     }
     if let Some(p) = self.piece_at(from) {
-      if p.color != self.side_to_move { return };
+      if p.color != moving_color { return };
 
       match p.figure {
         Figure::Pawn   => self.reachable_squares_pawn(from, reachable),
-        Figure::Rook   => self.reachable_squares_rook(from, reachable),
-        Figure::Knight => self.reachable_squares_knight(from, reachable),
-        Figure::Bishop => self.reachable_squares_bishop(from, reachable),
-        Figure::Queen  => self.reachable_squares_queen(from, reachable),
-        Figure::King   => self.reachable_squares_king(from, reachable),
+        Figure::Rook   => self.reachable_squares_rook(from, moving_color, reachable),
+        Figure::Knight => self.reachable_squares_knight(from, moving_color, reachable),
+        Figure::Bishop => self.reachable_squares_bishop(from, moving_color, reachable),
+        Figure::Queen  => self.reachable_squares_queen(from, moving_color, reachable),
+        Figure::King   => self.reachable_squares_king(from, moving_color, reachable),
       }
     }
   }
@@ -276,67 +287,69 @@ impl Board {
 
   }
 
-  fn reachable_squares_rook(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  fn reachable_squares_rook(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     let mut reached = 0;
-    reached += self.reachable_squares_direction(from, -1,  0, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  0, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0, -1, 8, reachable, reached);
-    self.reachable_squares_direction(from,  0,  1, 8, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  0, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  0,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  0, 8, moving_color, reachable, reached);
+               self.reachable_squares_direction(from,  0, -1, 8, moving_color, reachable, reached);
   }
 
-  fn reachable_squares_knight(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  fn reachable_squares_knight(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     let mut reached = 0;
-    reached += self.reachable_squares_direction(from,  2,  1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  2, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1,  2, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -2,  1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -2, -1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1, -2, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1, -2, 1, reachable, reached);
-    self.reachable_squares_direction(from,  2, -1, 1, reachable, reached);
+    reached += self.reachable_squares_direction(from,  2,  1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  2, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  2, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -2,  1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -2, -1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1, -2, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1, -2, 1, moving_color, reachable, reached);
+    self.reachable_squares_direction(from,  2, -1, 1, moving_color, reachable, reached);
   }
 
-  fn reachable_squares_bishop(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  fn reachable_squares_bishop(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     let mut reached = 0;
-    reached += self.reachable_squares_direction(from, -1, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1,  1, 8, reachable, reached);
-    self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1, -1, 8, moving_color, reachable, reached);
+               self.reachable_squares_direction(from,  1, -1, 8, moving_color, reachable, reached);
   }
 
-  fn reachable_squares_queen(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  fn reachable_squares_queen(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     let mut reached = 0;
-    reached += self.reachable_squares_direction(from, -1,  0, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  0, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0,  1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1, -1, 8, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1,  1, 8, reachable, reached);
-    self.reachable_squares_direction(from,  1,  1, 8, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  0, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  0,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  0, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1, -1, 8, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  0, -1, 8, moving_color, reachable, reached);
+               self.reachable_squares_direction(from,  1, -1, 8, moving_color, reachable, reached);
   }
 
-  fn reachable_squares_king(&self, from: Pos, reachable: &mut [Option<Ply>;28]) {
+  fn reachable_squares_king(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     let mut reached = 0;
-    reached += self.reachable_squares_direction(from, -1,  0, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  0, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0, -1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  0,  1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1, -1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1, -1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from, -1,  1, 1, reachable, reached);
-    reached += self.reachable_squares_direction(from,  1,  1, 1, reachable, reached);
-    if !self.is_in_check(self.side_to_move) {
-      if self.can_castle(self.side_to_move, Flank::Kingside)
+    reached += self.reachable_squares_direction(from,  1,  0, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1,  1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  0,  1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1,  0, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from, -1, -1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  0, -1, 1, moving_color, reachable, reached);
+    reached += self.reachable_squares_direction(from,  1, -1, 1, moving_color, reachable, reached);
+    // Only look at castling if it's actually your turn.
+    // Otherwise is_in_check comes back here and we recurse forever.
+    if moving_color == self.side_to_move && !self.is_in_check(self.side_to_move) {
+      if self.can_still_castle(self.side_to_move, Flank::Kingside)
           && self.piece_at(Pos{rank: from.rank, file: 5}) == None
           && self.piece_at(Pos{rank: from.rank, file: 6}) == None {
         let mv = Ply{from: from, to: Pos{rank: from.rank, file: 6}, capture: false, en_passant: false, castle: true, promote: None};
         if !self.castling_through_check(mv) {
           reachable[reached] = Some(mv);
-          // reached += 1;
+          reached += 1;
         }
       }
-      if self.can_castle(self.side_to_move, Flank::Queenside)
+      if self.can_still_castle(self.side_to_move, Flank::Queenside)
           && self.piece_at(Pos{rank: from.rank, file: 1}) == None
           && self.piece_at(Pos{rank: from.rank, file: 2}) == None
           && self.piece_at(Pos{rank: from.rank, file: 3}) == None {
@@ -349,21 +362,16 @@ impl Board {
     }
   }
 
-  fn reachable_squares_direction(&self, from: Pos, drank: i8, dfile: i8, max_dist: i8, reachable: &mut [Option<Ply>;28], reached: usize) -> usize {
-    // look at all the squares on the board based on geometry,
-    // until blocked or off the board
-    // if blocked: can we capture it?
-    // are we in check?: construct a new board and see
-
+  fn reachable_squares_direction(&self, from: Pos, drank: i8, dfile: i8, max_dist: i8, moving_color: Color, reachable: &mut [Option<Ply>;28], reached: usize) -> usize {
     let mut d = 1;
     let mut r = 0;
 
     while d <= max_dist {
       let to = Pos { rank: from.rank + drank * d, file: from.file + dfile * d };
-      if to.rank < 0 || to.rank > 7 || to.file < 0 || to.rank > 7 { break }
+      if to.rank < 0 || to.rank > 7 || to.file < 0 || to.file > 7 { break }
 
       if let Some(p) = self.piece_at(to) {
-        if p.color == self.side_to_move { break }
+        if p.color == moving_color { break }
         let mv = Ply{from: from, to: to, capture: true, en_passant: false, castle: false, promote: None};
         reachable[reached + r] = Some(mv);
         r += 1;
@@ -385,6 +393,7 @@ impl Board {
     let dir = if mv.to.file == 2 { 1 } else { -1 };
     let mv2 = Ply {
       to: Pos { rank: mv.to.rank, file: mv.to.file + dir },
+      castle: false,
       .. mv
     };
     self.make_move(mv2, &mut b);
@@ -433,8 +442,8 @@ impl Board {
   }
 
   fn find_king(&self, c: Color) -> Option<Pos> {
-    for rank in 0..7 {
-      for file in 0..7 {
+    for rank in 0..8 {
+      for file in 0..8 {
         let pos = Pos{rank: rank, file: file};
         if let Some(p) = self.piece_at(pos) {
           if p.color == c && p.figure == Figure::King {
@@ -448,17 +457,17 @@ impl Board {
 
   fn is_in_check(&self, c: Color) -> bool {
     let k = self.find_king(c).expect("no king found");
-    for rank in 0..7 {
-      for file in 0..7 {
+    for rank in 0..8 {
+      for file in 0..8 {
         let pos = Pos{rank: rank, file: file};
         let sq = self.piece_at(pos);
         if let Some(p) = sq {
           if p.color != c {
             let mut reachable = [None;28];
-            self.reachable_squares(pos, &mut reachable);
+            self.reachable_squares(pos, p.color, &mut reachable);
             let mut i = 0;
             while let Some(r) = reachable[i] {
-              if r.to == k { return true; }
+              if r.to == k && r.capture{ return true; }
               i += 1;
             }
           }
@@ -488,17 +497,19 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-  use super::{Board, Piece, Color, Figure, Pos};
+  use super::{Board, Piece, Color, Figure, Pos, Flank, Ply};
+  use fen::fen;
+  use nom::IResult::Done;
 
   #[test]
   fn colors() {
-    assert!(Color::White.other() == Color::Black);
-    assert!(Color::Black.other() == Color::White);
+    assert_eq!(Color::White.other(), Color::Black);
+    assert_eq!(Color::Black.other(), Color::White);
   }
 
   #[test]
   fn initial_setup() {
-    assert!(Board::initial_setup().grid == 
+    assert_eq!(Board::initial_setup().grid, 
       [
         [Some(Piece{color: Color::White, figure: Figure::Rook}),
          Some(Piece{color: Color::White, figure: Figure::Knight}),
@@ -527,7 +538,39 @@ mod tests {
 
   #[test]
   fn board_as_string() {
-    assert!(Board::initial_setup().as_string() == "rnbqkbnr\npppppppp\n        \n        \n        \n        \nPPPPPPPP\nRNBQKBNR\n");
+    assert_eq!(Board::initial_setup().as_string(), "rnbqkbnr\npppppppp\n        \n        \n        \n        \nPPPPPPPP\nRNBQKBNR\n");
+  }
+
+  #[test]
+  fn test_find_king() {
+    let mut b;
+    b = board_from_fen(&b"1k6/8/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert_eq!(b.find_king(Color::White), Some(Pos{rank: 0, file: 0}));
+    assert_eq!(b.find_king(Color::Black), Some(Pos{rank: 7, file: 1}));
+    b = board_from_fen(&b"8/8/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert_eq!(b.find_king(Color::White), Some(Pos{rank: 0, file: 0}));
+    assert_eq!(b.find_king(Color::Black), None);
+  }
+
+  #[test]
+  fn test_is_in_check() {
+    let mut b;
+    
+    b = board_from_fen(&b"1k6/8/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert!(!b.is_in_check(Color::Black));
+
+    b = board_from_fen(&b"1kQ5/8/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert!(b.is_in_check(Color::Black));
+
+    b = board_from_fen(&b"1k6/P7/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert!(b.is_in_check(Color::Black));
+
+    b = board_from_fen(&b"1k6/1P6/8/8/8/8/8/K7 w - - 0 1"[..]);
+    assert!(!b.is_in_check(Color::Black));
+
+    b = board_from_fen(&b"1k6/8/8/8/8/4r3/PPPP1PPP/R3K2R w KQ - 0 1"[..]);
+    println!("{}", b.as_string());
+    assert!(b.is_in_check(Color::White));
   }
 
   #[test]
@@ -536,9 +579,9 @@ mod tests {
     let mut legal = [None;28];
     b.legal_moves(Pos{rank: 1, file: 0}, &mut legal);
     println!("{:#?}", legal);
-    assert!(legal[0].map(|mv| mv.to) == Some(Pos{rank: 2, file: 0}));
-    assert!(legal[1].map(|mv| mv.to) == Some(Pos{rank: 3, file: 0}));
-    assert!(legal[2] == None);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 2, file: 0}));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 3, file: 0}));
+    assert_eq!(legal[2], None);
   }
 
   #[test]
@@ -546,7 +589,7 @@ mod tests {
     let b = Board::initial_setup();
     let mut legal = [None;28];
     b.legal_moves(Pos{rank: 6, file: 0}, &mut legal);
-    assert!(legal[0] == None);
+    assert_eq!(legal[0], None);
   }
 
   #[test]
@@ -554,7 +597,7 @@ mod tests {
     let b = Board::initial_setup();
     let mut legal = [None;28];
     b.legal_moves(Pos{rank: 0, file: 0}, &mut legal);
-    assert!(legal[0] == None);
+    assert_eq!(legal[0], None);
   }
 
   #[test]
@@ -563,17 +606,247 @@ mod tests {
     let mut legal = [None;28];
     b.legal_moves(Pos{rank: 0, file: 1}, &mut legal);
     println!("{:#?}", legal);
-    assert!(legal[0].map(|mv| mv.to) == Some(Pos{rank: 2, file: 2}));
-    assert!(legal[1].map(|mv| mv.to) == Some(Pos{rank: 2, file: 0}));
-    assert!(legal[2] == None);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 2, file: 2}));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 2, file: 0}));
+    assert_eq!(legal[2], None);
   }
 
-  // TODO: test for is_in_check
-  // TODO: test queen with 28 moves
-  // TODO: test for castling allowed, not allowed
+  #[test]
+  fn legal_rook_moves() {
+    let b = board_from_fen(&b"1k6/8/8/8/8/4r3/PPPP1PPP/R2KQ2R b KQ - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 2, file: 4}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[ 0].map(|mv| mv.to), Some(Pos{rank: 3, file: 4}));
+    assert_eq!(legal[ 1].map(|mv| mv.to), Some(Pos{rank: 4, file: 4}));
+    assert_eq!(legal[ 2].map(|mv| mv.to), Some(Pos{rank: 5, file: 4}));
+    assert_eq!(legal[ 3].map(|mv| mv.to), Some(Pos{rank: 6, file: 4}));
+    assert_eq!(legal[ 4].map(|mv| mv.to), Some(Pos{rank: 7, file: 4}));
+    assert_eq!(legal[ 5].map(|mv| mv.to), Some(Pos{rank: 2, file: 5}));
+    assert_eq!(legal[ 6].map(|mv| mv.to), Some(Pos{rank: 2, file: 6}));
+    assert_eq!(legal[ 7].map(|mv| mv.to), Some(Pos{rank: 2, file: 7}));
+    assert_eq!(legal[ 8].map(|mv| mv.to), Some(Pos{rank: 1, file: 4}));
+    assert_eq!(legal[ 9].map(|mv| mv.to), Some(Pos{rank: 0, file: 4}));
+    assert_eq!(legal[10].map(|mv| mv.to), Some(Pos{rank: 2, file: 3}));
+    assert_eq!(legal[11].map(|mv| mv.to), Some(Pos{rank: 2, file: 2}));
+    assert_eq!(legal[12].map(|mv| mv.to), Some(Pos{rank: 2, file: 1}));
+    assert_eq!(legal[13].map(|mv| mv.to), Some(Pos{rank: 2, file: 0}));
+    assert_eq!(legal[14].map(|mv| mv.to), None);
+  }
+
+  // workaround https://github.com/Geal/nom/issues/148
+  fn board_from_fen(str: &[u8]) -> Board {
+    match fen(str) {
+      Done(_, o) => return o,
+      _ => panic!("uh oh"),
+    }
+  }
+
+  #[test]
+  fn legal_queen_e4() {
+    let b = board_from_fen(&b"1k6/8/8/8/4Q3/8/8/K7 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 3, file: 4}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[ 0].map(|mv| mv.to), Some(Pos{rank: 4, file: 4}));
+    assert_eq!(legal[ 1].map(|mv| mv.to), Some(Pos{rank: 5, file: 4}));
+    assert_eq!(legal[ 2].map(|mv| mv.to), Some(Pos{rank: 6, file: 4}));
+    assert_eq!(legal[ 3].map(|mv| mv.to), Some(Pos{rank: 7, file: 4}));
+
+    assert_eq!(legal[ 4].map(|mv| mv.to), Some(Pos{rank: 4, file: 5}));
+    assert_eq!(legal[ 5].map(|mv| mv.to), Some(Pos{rank: 5, file: 6}));
+    assert_eq!(legal[ 6].map(|mv| mv.to), Some(Pos{rank: 6, file: 7}));
+
+    assert_eq!(legal[ 7].map(|mv| mv.to), Some(Pos{rank: 3, file: 5}));
+    assert_eq!(legal[ 8].map(|mv| mv.to), Some(Pos{rank: 3, file: 6}));
+    assert_eq!(legal[ 9].map(|mv| mv.to), Some(Pos{rank: 3, file: 7}));
+
+    assert_eq!(legal[10].map(|mv| mv.to), Some(Pos{rank: 2, file: 5}));
+    assert_eq!(legal[11].map(|mv| mv.to), Some(Pos{rank: 1, file: 6}));
+    assert_eq!(legal[12].map(|mv| mv.to), Some(Pos{rank: 0, file: 7}));
+
+    assert_eq!(legal[13].map(|mv| mv.to), Some(Pos{rank: 2, file: 4}));
+    assert_eq!(legal[14].map(|mv| mv.to), Some(Pos{rank: 1, file: 4}));
+    assert_eq!(legal[15].map(|mv| mv.to), Some(Pos{rank: 0, file: 4}));
+
+    assert_eq!(legal[16].map(|mv| mv.to), Some(Pos{rank: 2, file: 3}));
+    assert_eq!(legal[17].map(|mv| mv.to), Some(Pos{rank: 1, file: 2}));
+    assert_eq!(legal[18].map(|mv| mv.to), Some(Pos{rank: 0, file: 1}));
+
+    assert_eq!(legal[19].map(|mv| mv.to), Some(Pos{rank: 3, file: 3}));
+    assert_eq!(legal[20].map(|mv| mv.to), Some(Pos{rank: 3, file: 2}));
+    assert_eq!(legal[21].map(|mv| mv.to), Some(Pos{rank: 3, file: 1}));
+    assert_eq!(legal[22].map(|mv| mv.to), Some(Pos{rank: 3, file: 0}));
+
+    assert_eq!(legal[23].map(|mv| mv.to), Some(Pos{rank: 4, file: 3}));
+    assert_eq!(legal[24].map(|mv| mv.to), Some(Pos{rank: 5, file: 2}));
+    assert_eq!(legal[25].map(|mv| mv.to), Some(Pos{rank: 6, file: 1}));
+    assert_eq!(legal[26].map(|mv| mv.to), Some(Pos{rank: 7, file: 0}));
+
+    assert_eq!(legal[27].map(|mv| mv.to), None);
+  }
+
+  #[test]
+  fn legal_to_castle() {
+    let mut b;
+    let mut legal;
+
+    // white
+    b = board_from_fen(&b"r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 0, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 0, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2].map(|mv| mv.to), Some(Pos{rank: 0, file: 6}));
+    assert_eq!(legal[2].map(|mv| mv.castle), Some(true));
+    assert_eq!(legal[3].map(|mv| mv.to), Some(Pos{rank: 0, file: 2}));
+    assert_eq!(legal[3].map(|mv| mv.castle), Some(true));
+    assert_eq!(legal[4], None);
+
+    // black
+    b = board_from_fen(&b"r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 7, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 7, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 7, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2].map(|mv| mv.to), Some(Pos{rank: 7, file: 6}));
+    assert_eq!(legal[2].map(|mv| mv.castle), Some(true));
+    assert_eq!(legal[3].map(|mv| mv.to), Some(Pos{rank: 7, file: 2}));
+    assert_eq!(legal[3].map(|mv| mv.castle), Some(true));
+    assert_eq!(legal[4], None);
+  }
+
+  #[test]
+  fn illegal_to_castle() {
+    let mut b;
+    let mut legal;
+    
+    // Can't castle when something has moved:
+
+    b = board_from_fen(&b"1k6/8/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 0, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 0, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2], None);
+
+    // Can't castle when a piece is in the way:
+
+    b = board_from_fen(&b"1k6/8/8/8/8/8/PPPPPPPP/RN2K1NR w KQ - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 0, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 0, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2], None);
+
+    // Can't castle out of check:
+
+    b = board_from_fen(&b"1k6/8/8/8/8/4r3/PPPP1PPP/R3K2R w KQ - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 0, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 0, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2], None);
+
+    // Can't castle through check:
+
+    b = board_from_fen(&b"1k6/8/8/8/8/3r1r2/PPP3PP/R3K2R w KQ - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 1, file: 4}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1], None);
+
+    // Can't castle into check:
+
+    b = board_from_fen(&b"1k6/8/8/8/8/2r3r1/PP1PPP1P/R3K2R w KQ - 0 1"[..]);
+    legal = [None;28];
+    b.legal_moves(Pos{rank: 0, file: 4}, &mut legal);
+    println!("{:?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 0, file: 5}));
+    assert_eq!(legal[0].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 0, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.castle), Some(false));
+    assert_eq!(legal[2], None);
+  }
+
+  #[test]
+  fn moving_a_rook_ends_castling() {
+    let b = board_from_fen(&b"1k6/8/8/8/8/8/PPPPPPPP/R3K2R w KQ - 0 1"[..]);
+    assert!(b.can_still_castle(Color::White, Flank::Kingside));
+    assert!(b.can_still_castle(Color::White, Flank::Queenside));
+    let mv = Ply{from: Pos{rank: 0, file: 0}, to: Pos{rank: 0, file: 1}, capture: false, en_passant: false, castle: false, promote: None};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    println!("board:\n{}", b2.as_string());
+    assert!(b2.can_still_castle(Color::White, Flank::Kingside));
+    assert!(!b2.can_still_castle(Color::White, Flank::Queenside));
+  }
+
+  #[test]
+  fn moving_a_king_ends_castling() {
+    let b = board_from_fen(&b"1k6/8/8/8/8/8/PPPPPPPP/R3K2R w KQ - 0 1"[..]);
+    assert!(b.can_still_castle(Color::White, Flank::Kingside));
+    assert!(b.can_still_castle(Color::White, Flank::Queenside));
+    let mv = Ply{from: Pos{rank: 0, file: 4}, to: Pos{rank: 0, file: 3}, capture: false, en_passant: false, castle: false, promote: None};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    println!("board:\n{}", b2.as_string());
+    assert!(!b2.can_still_castle(Color::White, Flank::Kingside));
+    assert!(!b2.can_still_castle(Color::White, Flank::Queenside));
+  }
+
+  #[test]
+  fn cant_move_into_check() {
+    let b = board_from_fen(&b"k6K/q7/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 7, file: 7}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 7, file: 6}));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn cant_move_a_pinned_piece() {
+    let b = board_from_fen(&b"kq4BK/8/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 7, file: 6}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0], None);
+  }
+
+  #[test]
+  fn king_cant_move_next_to_a_king() {
+    let b = board_from_fen(&b"k1K5/8/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 7, file: 2}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 7, file: 3}));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 6, file: 3}));
+    assert_eq!(legal[2].map(|mv| mv.to), Some(Pos{rank: 6, file: 2}));
+    assert_eq!(legal[3], None);
+  }
+
+  // TODO: test for pawn one move vs two move
+  // TODO: test for pawn capture and not capture
   // TODO: test for e.p. allowed, not allowed, result of taking
   // TODO: test for promotion
-  // TODO: parse FEN
 
 }
 
