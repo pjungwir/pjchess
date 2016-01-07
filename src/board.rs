@@ -832,6 +832,54 @@ mod tests {
   }
 
   #[test]
+  fn cant_move_an_incidental_piece_when_in_check() {
+    let b = board_from_fen(&b"kq5K/8/8/8/8/8/7P/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 1, file: 7}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0], None);
+  }
+
+  #[test]
+  fn can_run_to_escape_check() {
+    let b = board_from_fen(&b"kq5K/5PP1/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 7, file: 7}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 6, file: 7}));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn can_capture_to_escape_check() {
+    let b = board_from_fen(&b"kq5K/B7/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 6, file: 0}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 7, file: 1}));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn can_block_to_escape_check() {
+    let b = board_from_fen(&b"kq5K/7B/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 6, file: 7}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 7, file: 6}));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn cant_capture_to_escape_double_check() {
+    let b = board_from_fen(&b"kq5K/B4n2/8/8/8/8/8/8 w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 6, file: 0}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0], None);
+  }
+
+  #[test]
   fn king_cant_move_next_to_a_king() {
     let b = board_from_fen(&b"k1K5/8/8/8/8/8/8/8 w - - 0 1"[..]);
     let mut legal = [None;28];
