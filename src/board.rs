@@ -436,7 +436,7 @@ impl Board {
       else if mv.from.file == 7 { b.can_castle[self.side_to_move as usize][Flank::Kingside as usize] = false; }
     } else if p.figure == Figure::Pawn {
       if (mv.from.rank - mv.to.rank).abs() == 2 {
-        b.en_passant = Some(Pos{rank: mv.from.rank + b.side_to_move.forward(), file: mv.from.file});
+        b.en_passant = Some(Pos{rank: mv.from.rank - b.side_to_move.forward(), file: mv.from.file});
       }
     }
   }
@@ -891,10 +891,118 @@ mod tests {
     assert_eq!(legal[3], None);
   }
 
-  // TODO: test for pawn one move vs two move
-  // TODO: test for pawn capture and not capture
-  // TODO: test for e.p. allowed, not allowed, result of taking
-  // TODO: test for promotion
+  #[test]
+  fn pawn_second_move() {
+    let b = board_from_fen(&b"k7/8/8/8/8/7P/8/7K w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 2, file: 7}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 3, file: 7}));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn pawn_can_capture_opponents() {
+    let b = board_from_fen(&b"k7/8/8/8/5n1n/6P1/8/7K w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 2, file: 6}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 3, file: 6}));
+    assert_eq!(legal[0].map(|mv| mv.capture), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 3, file: 5}));
+    assert_eq!(legal[1].map(|mv| mv.capture), Some(true));
+    assert_eq!(legal[2].map(|mv| mv.to), Some(Pos{rank: 3, file: 7}));
+    assert_eq!(legal[2].map(|mv| mv.capture), Some(true));
+    assert_eq!(legal[3], None);
+  }
+
+  #[test]
+  fn pawn_cant_capture_friends() {
+    let b = board_from_fen(&b"k7/8/8/8/5N1N/6P1/8/7K w - - 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 2, file: 6}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 3, file: 6}));
+    assert_eq!(legal[0].map(|mv| mv.capture), Some(false));
+    assert_eq!(legal[1], None);
+  }
+
+  #[test]
+  fn pawn_can_capture_en_passant() {
+    let b = board_from_fen(&b"k7/8/8/pPp5/8/8/8/7K w - a6 0 1"[..]);
+    let mut legal = [None;28];
+    b.legal_moves(Pos{rank: 4, file: 1}, &mut legal);
+    println!("{:#?}", legal);
+    assert_eq!(legal[0].map(|mv| mv.to), Some(Pos{rank: 5, file: 1}));
+    assert_eq!(legal[0].map(|mv| mv.capture), Some(false));
+    assert_eq!(legal[1].map(|mv| mv.to), Some(Pos{rank: 5, file: 0}));
+    assert_eq!(legal[1].map(|mv| mv.capture), Some(true));
+    assert_eq!(legal[1].map(|mv| mv.en_passant), Some(true));
+    assert_eq!(legal[2], None);
+  }
+
+  #[test]
+  fn pawn_jump_sets_en_passant() {
+    let b = board_from_fen(&b"k7/p7/8/8/8/8/8/7K b - - 0 1"[..]);
+    assert_eq!(b.en_passant, None);
+    let mv = Ply{from: Pos{rank: 6, file: 0}, to: Pos{rank: 4, file: 0}, capture: false, en_passant: false, castle: false, promote: None};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    println!("board:\n{}", b2.as_string());
+    assert_eq!(b2.en_passant, Some(Pos{rank: 5, file: 0}));
+  }
+
+  #[test]
+  fn en_passant_capture_removes_pawn() {
+    let b = board_from_fen(&b"k7/8/8/pPp5/8/8/8/7K w - a6 0 1"[..]);
+    let mv = Ply{from: Pos{rank: 4, file: 1}, to: Pos{rank: 5, file: 0}, capture: true, en_passant: true, castle: false, promote: None};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    assert_eq!(b2.piece_at(Pos{rank: 4, file: 0}), None);
+    assert_eq!(b2.piece_at(Pos{rank: 5, file: 0}), Some(Piece{color: Color::White, figure: Figure::Pawn}));
+    assert_eq!(b2.en_passant, None);
+  }
+
+  #[test]
+  fn en_passant_gets_cleared() {
+    let b = board_from_fen(&b"k7/8/8/pPp5/8/8/8/7K w - a6 0 1"[..]);
+    let mv = Ply{from: Pos{rank: 4, file: 1}, to: Pos{rank: 5, file: 1}, capture: false, en_passant: false, castle: false, promote: None};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    assert_eq!(b2.piece_at(Pos{rank: 4, file: 0}), Some(Piece{color: Color::Black, figure: Figure::Pawn}));
+    assert_eq!(b2.piece_at(Pos{rank: 5, file: 1}), Some(Piece{color: Color::White, figure: Figure::Pawn}));
+    assert_eq!(b2.en_passant, None);
+  }
+
+  #[test]
+  fn pawn_promotes_to_queen_moving_forward() {
+    let b = board_from_fen(&b"k7/7P/8/8/8/8/8/7K w - - 0 1"[..]);
+    let mv = Ply{from: Pos{rank: 6, file: 7}, to: Pos{rank: 7, file: 7}, capture: false, en_passant: false, castle: false, promote: Some(Figure::Queen)};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    assert_eq!(b2.piece_at(Pos{rank: 6, file: 7}), None);
+    assert_eq!(b2.piece_at(Pos{rank: 7, file: 7}), Some(Piece{color: Color::White, figure: Figure::Queen}));
+  }
+
+  #[test]
+  fn pawn_promotes_to_knight_moving_forward() {
+    let b = board_from_fen(&b"k7/7P/8/8/8/8/8/7K w - - 0 1"[..]);
+    let mv = Ply{from: Pos{rank: 6, file: 7}, to: Pos{rank: 7, file: 7}, capture: false, en_passant: false, castle: false, promote: Some(Figure::Knight)};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    assert_eq!(b2.piece_at(Pos{rank: 6, file: 7}), None);
+    assert_eq!(b2.piece_at(Pos{rank: 7, file: 7}), Some(Piece{color: Color::White, figure: Figure::Knight}));
+  }
+
+  #[test]
+  fn pawn_promotes_capturing() {
+    let b = board_from_fen(&b"k5n1/7P/8/8/8/8/8/7K w - - 0 1"[..]);
+    let mv = Ply{from: Pos{rank: 6, file: 7}, to: Pos{rank: 7, file: 6}, capture: true, en_passant: false, castle: false, promote: Some(Figure::Queen)};
+    let mut b2 = Board { .. b };
+    b.make_move(mv, &mut b2);
+    assert_eq!(b2.piece_at(Pos{rank: 6, file: 7}), None);
+    assert_eq!(b2.piece_at(Pos{rank: 7, file: 6}), Some(Piece{color: Color::White, figure: Figure::Queen}));
+  }
 
 }
 
