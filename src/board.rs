@@ -97,13 +97,13 @@ impl Piece {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-struct Ply {
-  from: Pos,
-  to: Pos,
-  capture: bool,
-  en_passant: bool,
-  castle: bool,
-  promote: Option<Figure>,
+pub struct Ply {
+  pub from: Pos,
+  pub to: Pos,
+  pub capture: bool,
+  pub en_passant: bool,
+  pub castle: bool,
+  pub promote: Option<Figure>,
 }
 
 
@@ -162,7 +162,7 @@ impl Board {
     self.can_castle[c as usize][f as usize]
   }
 
-  // Finds all possible legal moves for a given piece.
+  /// Finds all possible legal moves for a given piece.
   fn legal_moves(&self, from: Pos, legal: &mut [Option<Ply>;28]) {
 
     // First find the squares this piece can reach regardless of check.
@@ -187,9 +187,9 @@ impl Board {
     }
   }
 
-  // Finds all possible moves for a given piece,
-  // *without* considering whether it would put you in check.
-  // This is so is_in_check can use this same method.
+  /// Finds all possible moves for a given piece,
+  /// *without* considering whether it would put you in check.
+  /// This is so is_in_check can use this same method.
   fn reachable_squares(&self, from: Pos, moving_color: Color, reachable: &mut [Option<Ply>;28]) {
     // Look at all the squares on the board based on geometry,
     // until blocked or off the board.
@@ -400,6 +400,8 @@ impl Board {
     b.is_in_check(self.side_to_move)
   }
 
+  // TODO: Change this to return a Result<Board>.
+  // TODO: have it verify that `mv` is among the legal moves.
   fn make_move(&self, mv: Ply, b: &mut Board) {
     b.clone_from(&self);
     let p = self.grid[mv.from.rank as usize][mv.from.file as usize].expect("must move something");
