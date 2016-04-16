@@ -154,7 +154,7 @@ impl Board {
     b
   }
 
-  fn piece_at(&self, pos: Pos) -> Option<Piece> {
+  pub fn piece_at(&self, pos: Pos) -> Option<Piece> {
     self.grid[pos.rank as usize][pos.file as usize]
   }
 
@@ -163,7 +163,7 @@ impl Board {
   }
 
   /// Finds all possible legal moves for a given piece.
-  fn legal_moves(&self, from: Pos, legal: &mut [Option<Ply>;28]) {
+  pub fn legal_moves(&self, from: Pos, legal: &mut [Option<Ply>;28]) {
 
     // First find the squares this piece can reach regardless of check.
     self.reachable_squares(from, self.side_to_move, legal);
@@ -402,7 +402,7 @@ impl Board {
 
   // TODO: Change this to return a Result<Board>.
   // TODO: have it verify that `mv` is among the legal moves.
-  fn make_move(&self, mv: Ply, b: &mut Board) {
+  pub fn make_move(&self, mv: Ply, b: &mut Board) {
     b.clone_from(&self);
     let p = self.grid[mv.from.rank as usize][mv.from.file as usize].expect("must move something");
     b.grid[mv.from.rank as usize][mv.from.file as usize] = None;
