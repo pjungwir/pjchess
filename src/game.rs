@@ -30,15 +30,21 @@ impl Game {
   }
 
   pub fn make_move(&mut self, mv: Ply) {
-    let mut b2: Box<Board>;
+    let r;
     {
       let ref b = self.frames.last().expect("must have a frame").as_ref();
-      b2 = Box::new(Board { .. **b });
-      b.make_move(mv, &mut b2);
+      r = b.try_make_move(mv)
     }
-
-    self.plies.push(mv);
-    self.frames.push(b2);
+    match r {
+      Ok(b2) => {
+        self.plies.push(mv);
+        self.frames.push(b2);
+      },
+      _ => {
+        // TODO: Propogate this error with try! or its replacement
+        panic!("Illegal move");
+      }
+    }
   }
 
 }

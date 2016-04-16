@@ -162,6 +162,17 @@ impl Board {
     self.can_castle[c as usize][f as usize]
   }
 
+  fn is_legal_move(&self, mv: Ply) -> bool {
+    let mut legal = [None;28];
+    self.legal_moves(mv.from, &mut legal);
+    let mut i = 0;
+    while let Some(ok) = legal[i] {
+      if ok == mv { return true; }
+      i += 1
+    }
+    return false;
+  }
+
   /// Finds all possible legal moves for a given piece.
   pub fn legal_moves(&self, from: Pos, legal: &mut [Option<Ply>;28]) {
 
@@ -400,8 +411,16 @@ impl Board {
     b.is_in_check(self.side_to_move)
   }
 
-  // TODO: Change this to return a Result<Board>.
-  // TODO: have it verify that `mv` is among the legal moves.
+  pub fn try_make_move(&self, mv: Ply) -> Result<Box<Board>, ()> {
+    let mut b: Box<Board> = Box::new(Board { .. *self });
+    if self.is_legal_move(mv) {
+      self.make_move(mv, &mut b);
+      Ok(b)
+    } else {
+      Err(())
+    }
+  }
+
   pub fn make_move(&self, mv: Ply, b: &mut Board) {
     b.clone_from(&self);
     let p = self.grid[mv.from.rank as usize][mv.from.file as usize].expect("must move something");
