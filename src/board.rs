@@ -1025,5 +1025,19 @@ mod tests {
     assert_eq!(b2.piece_at(Pos{rank: 7, file: 6}), Some(Piece{color: Color::White, figure: Figure::Queen}));
   }
 
+  #[test]
+  fn legal_moves_are_allowed() {
+    let b = Board::initial_setup();
+    let r = b.try_make_move(Ply{from: Pos{rank: 1, file: 4}, to: Pos{rank: 3, file: 4}, capture: false, en_passant: false, castle: false, promote: None});
+    assert!(r.is_ok());
+  }
+
+  #[test]
+  fn illegal_moves_are_forbidden() {
+    let b = Board::initial_setup();
+    let r = b.try_make_move(Ply{from: Pos{rank: 1, file: 4}, to: Pos{rank: 4, file: 4}, capture: false, en_passant: false, castle: false, promote: None});
+    assert!(!r.is_ok());
+  }
+
 }
 
